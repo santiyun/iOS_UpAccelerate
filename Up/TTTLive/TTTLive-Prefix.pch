@@ -13,6 +13,6 @@
 #import "NSObject+Toast.h"
 #import "UASharedApp.h"
 
-#define UAShare [UASharedApp share]
+#define TTManager [TTTRtcManager manager]
 
 #endif /* TTTLive_Prefix_pch */

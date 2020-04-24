@@ -8,7 +8,10 @@
 
 #import "UALoginViewController.h"
 
+static NSString *const TTTH265 = @"?trans=1";
+
 @interface UALoginViewController ()<TTTRtcEngineDelegate>
+@property (weak, nonatomic) IBOutlet UIButton *cdnBtn;
 @property (weak, nonatomic) IBOutlet UITextField *roomIDTF;
 @property (weak, nonatomic) IBOutlet UILabel *websiteLabel;
 @property (nonatomic, assign) int64_t uid;
@@ -19,7 +22,8 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view.
-    _websiteLabel.text = TTTRtcEngineKit.getSdkVersion;
+    NSString *dateStr = NSBundle.mainBundle.infoDictionary[@"CFBundleVersion"];
+    _websiteLabel.text = [TTTRtcEngineKit.getSdkVersion stringByAppendingFormat:@"__%@", dateStr];
     _uid = arc4random() % 100000 + 1;
     int64_t roomID = [[NSUserDefaults standardUserDefaults] stringForKey:@"ENTERROOMID"].integerValue;
     if (roomID == 0) {
@@ -30,7 +34,7 @@
 
 - (IBAction)enterChannel:(id)sender {
     if (_roomIDTF.text.integerValue == 0 || _roomIDTF.text.length >= 19) {
-        [self showMessage:@"请输入19位以内的房间ID"];
+        [self showMessage:@"请输入正确的房间id"];
         return;
     }
     int64_t rid = _roomIDTF.text.longLongValue;
@@ -39,54 +43,47 @@
     [UAHud hudShow:self.view];
     UAShare.uid = _uid;
     UAShare.roomID = rid;
-    UAShare.mutedSelf = false;
+    TTTRtcEngineKit *engine = UAShare.engine;
     
+    engine.delegate = self;
+    //设置模式直播
+    [engine setChannelProfile:TTTRtc_ChannelProfile_LiveBroadcasting];
+    //设置用户角色为主播
+    [engine setClientRole:TTTRtc_ClientRole_Anchor];
+    //需要音量提示开启---可选接口
+    [engine enableAudioVolumeIndication:500 smooth:3];
     
-    TTTRtcEngineKit *rtcEngine = UAShare.rtcEngine;
-    //设置 TTTRtcEngineDelegate 代理
-    rtcEngine.delegate = self;
-    //设置为直播模式
-    [rtcEngine setChannelProfile:TTTRtc_ChannelProfile_LiveBroadcasting];
-    //设置用户角色为主播...上行加速不允许连麦
-    [rtcEngine setClientRole:TTTRtc_ClientRole_Anchor];
-    //启用说话者音量提示...监控自己音量（可选）
-    [rtcEngine enableAudioVolumeIndication:1000 smooth:3];
-    //启用说话...该方法视全局的，SDK不会重新设置这个状态，退出房间也不改变状态
-    [rtcEngine muteLocalAudioStream:NO];
-    
-    //推流地址设置
-    TTTPublisherConfigurationBuilder *builder = [[TTTPublisherConfigurationBuilder alloc] init];
-    NSString *pushURL = [@"rtmp://push.3ttech.cn/sdk/" stringByAppendingFormat:@"%@", _roomIDTF.text];
-    [builder setPublisherUrl:pushURL];
-    [rtcEngine configPublisher:builder.build];
-    
-    //设置编码尺寸
-    [rtcEngine setVideoProfile:TTTRtc_VideoProfile_360P swapWidthAndHeight:YES];
-    
-    //上行加速必须在加入房间前调用该接口
-    [rtcEngine enableUplinkAccelerate:YES];
-    [rtcEngine setPreferAudioCodec:TTTRtc_AudioCodec_AAC bitrate:64 channels:1];
-    
-    //加入房间
-    [rtcEngine joinChannelByKey:nil channelName:_roomIDTF.text uid:_uid joinSuccess:nil];
+    TTTPublisherConfiguration *config = [[TTTPublisherConfiguration alloc] init];
+    NSString *pushURL = [@"rtmp://push.3ttest.cn/sdk2/" stringByAppendingFormat:@"%@", _roomIDTF.text];
+    config.publishUrl = pushURL;
+    //设置推流参数
+    [engine configPublisher:config];
+    //设置编码参数--竖屏模式需要交换宽高
+    [engine setVideoProfile:CGSizeMake(528, 960) frameRate:15 bitRate:1600];
+    //打开房间预览--离开房间需要对应停止预览stopPreview
+    [engine startPreview];
+    //加入频道
+    [engine joinChannelByKey:nil channelName:_roomIDTF.text uid:_uid joinSuccess:nil];
 }
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     [self.view endEditing:YES];
 }
 #pragma mark - TTTRtcEngineDelegate
-//加入房间成功...
+//加入房间成功
 -(void)rtcEngine:(TTTRtcEngineKit *)engine didJoinChannel:(NSString *)channel withUid:(int64_t)uid elapsed:(NSInteger)elapsed {
     [UAHud hudHide:self.view];
     [self performSegueWithIdentifier:@"Live" sender:nil];
 }
-
 //加入房间失败
 -(void)rtcEngine:(TTTRtcEngineKit *)engine didOccurError:(TTTRtcErrorCode)errorCode {
     NSString *errorInfo = @"";
     switch (errorCode) {
         case TTTRtc_Error_Enter_TimeOut:
-            errorInfo = @"超时,10秒未收到服务器返回结果";
+            errorInfo = @"超时,10秒未收到服务器返回结果";//如果不调用leaveChannel,会继续尝试登录
+            break;
+        case TTTRtc_Error_Enter_Failed:
+            errorInfo = @"该直播间不存在";
             break;
         case TTTRtc_Error_Enter_BadVersion:
             errorInfo = @"版本错误";

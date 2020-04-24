@@ -9,13 +9,15 @@
 #import <Foundation/Foundation.h>
 #import <TTTRtcEngineKit/TTTRtcEngineKit.h>
 
+
+#define UAShare UASharedApp.share
+
 @interface UASharedApp : NSObject
-@property (nonatomic, strong) TTTRtcEngineKit *rtcEngine;
+@property (nonatomic, strong) TTTRtcEngineKit *engine;
 @property (nonatomic, assign) int64_t uid;
 @property (nonatomic, assign) BOOL mutedSelf;
 @property (nonatomic, assign) int64_t roomID;
 
 + (instancetype)share;
-
 @end
 

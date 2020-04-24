@@ -23,8 +23,7 @@ static id _share;
 {
     self = [super init];
     if (self) {
-        //设置 AppId
-        _rtcEngine = [TTTRtcEngineKit sharedEngineWithAppId:<#name#> delegate:nil];
+        _engine = [TTTRtcEngineKit sharedEngineWithAppId:@"test900572e02867fab8131651339518" delegate:nil];
     }
     return self;
 }
