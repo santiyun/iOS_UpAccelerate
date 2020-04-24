@@ -19,7 +19,7 @@
 
 ## SDK接口流程
 
-![image](up.png)
+![image](https://github.com/santiyun/iOS_UpAccelerate/raw/master/TTTLib/up.png)
 
 ## 接口使用列表
 
